@@ -27,6 +27,7 @@ async function apiRequest(
 }
 
 export const authAPI = {
+  // Register
   register: (data: {
     name: string;
     email: string;
@@ -38,6 +39,7 @@ export const authAPI = {
       body: JSON.stringify(data),
     }),
 
+  // Email and password login
   login: (data: {
     email: string;
     password: string;
@@ -47,17 +49,20 @@ export const authAPI = {
       body: JSON.stringify(data),
     }),
 
-  googleLogin: (token: string) =>
+  // Google login
+  googleLogin: (credential: string) =>
     apiRequest("/auth/google", {
       method: "POST",
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ credential }),
     }),
 
+  // Logout
   logout: () =>
     apiRequest("/auth/logout", {
       method: "POST",
     }),
 
+  // Get current logged-in user
   me: () =>
     apiRequest("/auth/me"),
 };

@@ -1,5 +1,7 @@
+
 import type { Metadata } from "next";
 import { Providers } from "@/components/providers";
+import GoogleProvider from "@/components/GoogleProvider";
 import { Navbar } from "@/components/navbar";
 import "./globals.css";
 
@@ -16,10 +18,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <Providers>
-          <Navbar />
-          {children}
-        </Providers>
+        <GoogleProvider>
+          <Providers>
+            <Navbar />
+            {children}
+          </Providers>
+        </GoogleProvider>
       </body>
     </html>
   );
