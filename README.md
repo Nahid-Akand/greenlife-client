@@ -41,76 +41,9 @@ _Add your deployed frontend URL here._
 - Reusable UI components
 - API integration with the Express.js backend
 
-## 📁 Project Structure
 
-```text
-greenlife_client/
-├── public/
-│
-├── src/
-│   ├── app/
-│   │   ├── events/
-│   │   ├── login/
-│   │   ├── register/
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   │
-│   ├── components/
-│   │   ├── events/
-│   │   └── ui/
-│   │
-│   ├── contexts/
-│   │   ├── auth-context.tsx
-│   │   └── events-context.tsx
-│   │
-│   ├── hooks/
-│   └── lib/
-│       └── api.ts
-│
-├── .env.local
-├── .gitignore
-├── package.json
-└── README.md
-```
 
-## ⚙️ Getting Started
 
-### 1. Clone the repository
-
-```bash
-git clone YOUR_FRONTEND_REPOSITORY_URL
-```
-
-### 2. Navigate to the project
-
-```bash
-cd greenlife_client
-```
-
-### 3. Install dependencies
-
-```bash
-npm install
-```
-
-### 4. Configure environment variables
-
-Create a `.env.local` file in the project root:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5001
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
-```
-
-Replace the Google Client ID placeholder with your actual Google OAuth Client ID.
-
-### 5. Run the development server
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 🔗 Backend Integration
 
