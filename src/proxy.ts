@@ -11,7 +11,7 @@ export async function proxy(request: NextRequest) {
     }
 
     const response = await fetch(
-      `${process.env.API_URL}/auth/me`,
+      `${process.env.NEXT_PUBLIC_API_URL}/auth/me`,
       {
         headers: {
           Cookie: cookie,
