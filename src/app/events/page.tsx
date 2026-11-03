@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { EventCard } from "@/components/events/event-card";
 import { useEvents } from "@/contexts/events-context";
@@ -27,6 +28,11 @@ export default function AllEventsPage() {
   const { user } = useAuth();
 
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [now, setNow] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
 
   const filteredEvents =
     selectedCategory === "All"
@@ -37,12 +43,12 @@ export default function AllEventsPage() {
             selectedCategory.toLowerCase()
         );
 
-  const now = Date.now();
-
   const getEventStatus = (
     dateTime: string,
     endDateTime: string
   ): EventStatus => {
+    if (now === null) return "upcoming";
+
     const start = new Date(dateTime).getTime();
     const end = new Date(endDateTime).getTime();
 
@@ -96,7 +102,7 @@ export default function AllEventsPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || now === null) {
     return (
       <div className="bg-background py-20 text-center text-foreground">
         Loading events...

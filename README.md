@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GreenLife — Social Development Events Platform
 
-## Getting Started
+Next.js 16 client (Turbopack, Tailwind v4, React compiler) for organizing and joining community development events.
 
-First, run the development server:
+Auth + events are backed by a separate Express + MongoDB backend in the sibling directory `../greenlife-server` (own `AGENTS.md`).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Getting started
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. Start the backend (required for login + events):
+   ```bash
+   cd ../greenlife-server
+   node index.js
+   ```
+   It needs `.env` `MONGODB_URI` + a running MongoDB; auth routes return 500 without it. Backend CORS is hardcoded to `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2. Start the client:
+   ```bash
+   npm run dev        # http://localhost:3000 (falls back to 3001, …)
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Open http://localhost:3000.
 
-## Learn More
+## Commands
 
-To learn more about Next.js, take a look at the following resources:
+- `npm run dev` — Turbopack dev server. A second `npm run dev` detects the running instance and exits.
+- `npm run build` / `npm run start` — production build / serve.
+- `npx tsc --noEmit` — strict typecheck (no script in package.json).
+- `npm run lint` — eslint flat config.
+- No test suite. Verify with `npx tsc --noEmit` + `npm run lint`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+See `AGENTS.md` for agent-facing conventions, gotchas, and the pre-existing lint/typecheck baseline.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Routes
 
-## Deploy on Vercel
+`/`, `/login`, `/register`, `/events`, `/events/create`, `/events/manage`, `/events/joined`, `/events/[id]`, plus section-preview scratch pages.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Standard Next.js deploy (Vercel adapter not required). Point `NEXT_PUBLIC_API_URL` at your deployed backend.

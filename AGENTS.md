@@ -10,33 +10,52 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # GreenLife — Social Development Events Platform
 
-Next.js 16 client. The auth backend is a **separate app in the sibling directory `../greenlife-server`** (Express + MongoDB, own `AGENTS.md`).
+Next.js 16 client (Turbopack, Tailwind v4, React compiler). Auth backend is the sibling app `../greenlife-server` (Express + MongoDB). Auth + events are backend-backed via cookie sessions — **not** localStorage.
 
 ## Commands
-- `npm run dev` — Turbopack dev server, http://localhost:3000; if busy it takes the next free port (3001, …). If a dev server is already running for this directory, a second `npm run dev` detects it and exits, pointing at the running instance (log: `.next/dev/logs/next-development.log`).
+- `npm run dev` — Turbopack dev server, http://localhost:3000; falls back to the next free port (3001, …). A second `npm run dev` detects the running instance and exits (log: `.next/dev/logs/next-development.log`).
 - `npm run build` / `npm run start` — production build / serve.
-- `npx tsc --noEmit` — typecheck (strict TS; no typecheck script). Currently passes clean.
-- `npm run lint` — `eslint` (flat config, next vitals + TS rules). **Exits 1 on pre-existing errors**: `@typescript-eslint/no-explicit-any` in `src/app/login/page.tsx` (×2) and `src/app/register/page.tsx` (×1), `react-hooks/set-state-in-effect` in `src/components/ui/carousel.tsx`, plus 4 `no-img-element` warnings. Don't fix these unless asked; just don't add new ones.
-- No test suite exists. Verify with `npx tsc --noEmit` + lint (compare against the baseline above).
+- `npx tsc --noEmit` — strict typecheck (no script in package.json).
+- `npm run lint` — eslint flat config.
+- No test suite. Verify with `npx tsc --noEmit` + `npm run lint`.
 
-## Backend (required for login/register to work)
-- `src/lib/api.ts` calls `NEXT_PUBLIC_API_URL` or `http://localhost:5001` with `credentials: "include"` (cookie sessions). Start the backend with `node index.js` in `../greenlife-server`; it needs `.env` `MONGODB_URI` + a running MongoDB or auth routes return 500.
-- **CORS is hardcoded to origin `http://localhost:3000` in the backend** — if the dev server fell back to port 3001, auth calls fail with a CORS error.
-- Only auth is server-backed; **events CRUD is localStorage-only** (key `greenlife_events`).
-- Known contract mismatch (as of this writing): the server responds `{ user }` on success and `{ error }` on failure, but `api.ts` returns the body unchanged and reads `error.message` — so `login()`/`register()` currently store the envelope `{ user: … }` and API failures always surface as "Request failed". Fix both sides together when touching auth.
-- "Continue with Google" posts a stub token to `POST /auth/google`, which the backend does not implement (404).
+## Verification baseline (measured; pre-existing — do not treat as your regressions)
+`npx tsc --noEmit` exits 1 with 3 errors, all `Property 'status' is missing ... required in type 'EventCardProps'` (`EventCardProps.status` is `"upcoming" | "active" | "completed"` and is required):
+- `src/app/events/joined/page.tsx:34`
+- `src/app/events/manage/page.tsx:161`
+- `src/components/sections/recent-events.tsx:47`
 
-## Architecture
-- Root layout `src/app/layout.tsx` wraps everything: `ThemeProvider` (next-themes) → `AuthProvider` → `EventsProvider` → `Navbar` + `Toaster` + `ThemeScript`. Do not add more global providers elsewhere.
-- Auth: `src/contexts/auth-context.tsx` — `useAuth()`; `login(user)` takes a **User object returned by the API** (not credentials); `logout()` only clears localStorage key `greenlife_user` — it does **not** call `authAPI.logout` (defined in `api.ts`, never used), so the server session cookie survives. `isLoading` is hardcoded `false`. `DEMO_USER` is an unused leftover (the old demo login is gone).
-- Events: `src/contexts/events-context.tsx` — `createEvent`/`joinEvent`/`leaveEvent`/`deleteEvent`/`updateEvent`/`getEventById`, persisted to localStorage; seed data `SEED_EVENTS` lives in the auth-context file.
-- Routes: `/`, `/login`, `/register`, `/events/create`, `/events/manage`, `/events/joined`, `/events/[id]`, plus section-preview scratch pages `/banner`, `/gallery`, `/features`, `/newsletter`, `/recent-events`, `/navbar`.
-- **`AuthGuard` (`src/components/auth-guard.tsx`) exists but is used nowhere** — no route redirects to `/login`. Pages handle auth inline instead: `EventCard` join redirects to `/login`, the event-detail Join button is disabled with a sign-in hint, manage/joined render empty states when logged out, and create's `handleSave` silently no-ops without a user.
+`npm run lint` exits 1 with 15 problems (9 errors, 6 warnings):
+Errors — `no-explicit-any`: `src/app/login/page.tsx:53,85`, `src/app/register/page.tsx:94`; `react-hooks/set-state-in-effect`: `src/app/events/[id]/page.tsx:34`, `src/components/theme-toggle.tsx:13`, `src/components/ui/carousel.tsx:98`, `src/contexts/events-context.tsx:78`; `react-hooks/purity`: `src/app/events/page.tsx:40` (`Date.now` during render); `react/no-unescaped-entities`: `src/app/events/manage/page.tsx:144`.
+Warnings — 6 × `no-img-element`: `src/app/events/[id]/page.tsx:78`, `src/components/events/event-card.tsx:55`, `src/components/events/event-form.tsx:391`, `src/components/sections/index.tsx:36,121,335`.
+
+Don't add new lint/tsc issues. Don't claim the tree is clean.
+
+## Backend (required for login + events)
+- `src/lib/api.ts`: base = `NEXT_PUBLIC_API_URL` or `http://localhost:5001`, `credentials: "include"` (cookie sessions). `.env` sets `NEXT_PUBLIC_API_URL=http://localhost:5001`.
+- Start the backend with `node index.js` in `../greenlife-server`; it needs `.env` `MONGODB_URI` + a running MongoDB or routes return 500.
+- Backend CORS is hardcoded to origin `http://localhost:3000` — if dev fell back to port 3001, auth calls fail with CORS.
+- Google login posts `{ credential }` to `POST /auth/google` (client `authAPI.googleLogin`); server-side implementation is unverified.
+
+## Auth (`src/contexts/auth-context.tsx`)
+- `useAuth()`; `login(user)` takes a **User object returned by the API** (not credentials).
+- `logout()` calls `authAPI.logout()` then clears the frontend user.
+- On mount, `useEffect` calls `authAPI.me()` to restore the session; `isLoading` is real state (starts `true`).
+- No route redirects to `/login`. `AuthGuard` (`src/components/auth-guard.tsx`) exists but is **unused**. Pages handle auth inline: event-detail Join is disabled with a sign-in hint when logged out; manage/joined render empty states when logged out; create no-ops without a user.
+
+## Events (`src/contexts/events-context.tsx`)
+- `createEvent`/`joinEvent`/`leaveEvent`/`deleteEvent`/`updateEvent`/`getEventById`/`loadEvents`, all `fetch` to `${API_URL}/events…` with `credentials: "include"`. Persisted to the backend (MongoDB), not localStorage. No seed data file.
+
+## Layout / providers
+- `src/app/layout.tsx`: `GoogleProvider` > `Providers` > `Navbar` + `{children}`. `Providers` (`src/components/providers.tsx`): `ThemeProvider` (next-themes, `storageKey="greenlife-theme"`, default `light`, `enableSystem={false}`) → `AuthProvider` → `EventsProvider`. **Do not add more global providers elsewhere.**
+- `Toaster`/`ThemeScript` components exist but are **not mounted** in the layout.
+
+## Routes
+- `/`, `/login`, `/register`, `/events`, `/events/create`, `/events/manage`, `/events/joined`, `/events/[id]`; scratch previews `/banner`, `/gallery`, `/features`, `/newsletter`, `/recent-events`, `/navbar`.
 
 ## Conventions / gotchas
-- Path alias: `@/*` → `./src/*` (see `tsconfig.json` paths).
-- UI: shadcn **base-nova** style over **Base UI** (`@base-ui/react`) + lucide-react — **not Radix**; most online shadcn examples won't match this codebase.
-- `cn` is imported directly as `import { cn } from "cn"` (the `cn` npm package) throughout existing components. `@/lib/utils` re-exports it but nothing imports it; the shadcn CLI alias points there, so CLI-generated files may use `@/lib/utils`.
-- Base UI has **no `asChild`** (Radix API). Use the `render` prop instead (see `src/components/ui/dialog.tsx`) or navigate with `onClick={() => router.push(...)}` as existing pages do.
-- Next.js **16**: dynamic route `params` is a Promise — `src/app/events/[id]/page.tsx` resolves it via `params.then(...)` inside `useEffect`. Read `node_modules/next/dist/docs/` before writing non-obvious Next code (see block above).
-- `next.config.ts`: `cacheComponents: true`, `partialPrefetching: true`, `reactCompiler: true` (babel-plugin-react-compiler), Tailwind v4 CSS loaded via `@tailwindcss/turbopack`. If the dev UI looks stale after edits, restart `npm run dev`.
+- Path alias: `@/*` → `./src/*` (`tsconfig.json` paths).
+- UI: shadcn **base-nova** over **Base UI** (`@base-ui/react`) + lucide-react — **not Radix**; no `asChild`. Use the `render` prop (see `src/components/ui/dialog.tsx`) or `router.push()`.
+- `import { cn } from "cn"` (the `cn` package) throughout. `@/lib/utils` defines `cn` too but nothing imports it from there; the shadcn CLI alias points to `@/lib/utils`, so CLI-generated files may use `@/lib/utils`.
+- Next.js 16: `useParams()` returns a plain object here (`const id = params.id`), **not** a Promise — do not `await`/`.then()` it.
+- `next.config.ts`: `cacheComponents: true`, `partialPrefetching: true`, `reactCompiler: true`; Tailwind v4 via `@tailwindcss/turbopack` under `turbopack.rules["*.css"]`. `globals.css` uses `@import "tailwindcss"` + `@theme inline`. If dev UI looks stale after edits, restart `npm run dev`.
