@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function proxy(request: NextRequest) {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    console.error("NEXT_PUBLIC_API_URL is not configured");
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  const cookie = request.headers.get("cookie");
+
+  if (!cookie) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
   try {
-    const cookie = request.headers.get("cookie");
-
-    if (!cookie) {
-      return NextResponse.redirect(
-        new URL("/login", request.url)
-      );
-    }
-
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/auth/me`,
+      `${apiUrl.replace(/\/$/, "")}/auth/me`,
       {
+        method: "GET",
         headers: {
           Cookie: cookie,
         },
@@ -21,29 +27,23 @@ export async function proxy(request: NextRequest) {
     );
 
     if (!response.ok) {
-      return NextResponse.redirect(
-        new URL("/login", request.url)
-      );
+      return NextResponse.redirect(new URL("/login", request.url));
     }
 
     const data = await response.json();
 
-    if (!data.authenticated || !data.user) {
-      return NextResponse.redirect(
-        new URL("/login", request.url)
-      );
+    if (data.authenticated === true && data.user) {
+      return NextResponse.next();
     }
 
-    return NextResponse.next();
+    return NextResponse.redirect(new URL("/login", request.url));
   } catch (error) {
     console.error("Proxy authentication error:", error);
 
-    return NextResponse.redirect(
-      new URL("/login", request.url)
-    );
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 }
 
 export const config = {
-  matcher: ["/events/create/:path*"],
+  matcher: ["/events/create"],
 };
