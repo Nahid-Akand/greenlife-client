@@ -4,14 +4,21 @@
 import { Suspense, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+
 import { Button } from "@/components/ui/button";
 import { useEvents } from "@/contexts/events-context";
 import { useAuth } from "@/contexts/auth-context";
+
 import { Calendar, MapPin, Users, Tag } from "lucide-react";
 import type { Event } from "@/types";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+
+// --------------------------------------------------
+// EVENT DETAILS
+// --------------------------------------------------
 
 function DetailContent({
   event,
@@ -23,19 +30,16 @@ function DetailContent({
   const { joinEvent, leaveEvent } = useEvents();
 
   const [attendeeIds, setAttendeeIds] = useState<string[]>(
-    event.attendeeIds ?? []
+    () => event.attendeeIds ?? []
   );
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const isJoined = !!user && attendeeIds.includes(user.id);
 
-  useEffect(() => {
-    setAttendeeIds(event.attendeeIds ?? []);
-  }, [event.attendeeIds]);
-
   const handleToggle = async () => {
-    if (!user) return;
+    if (!user || isSubmitting) return;
 
     try {
       setIsSubmitting(true);
@@ -43,11 +47,13 @@ function DetailContent({
 
       if (isJoined) {
         await leaveEvent(event.id);
+
         setAttendeeIds((prev) =>
           prev.filter((id) => id !== user.id)
         );
       } else {
         await joinEvent(event.id);
+
         setAttendeeIds((prev) =>
           prev.includes(user.id) ? prev : [...prev, user.id]
         );
@@ -69,16 +75,19 @@ function DetailContent({
         href="/events"
         className="inline-flex items-center gap-2 mb-6 text-sm font-medium text-muted-foreground hover:text-primary hover:no-underline"
       >
-        <span className="size-4">←</span> Back to events
+        <span className="size-4">←</span>
+        Back to events
       </Link>
 
       <div className="max-w-3xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Event Image */}
         <div className="relative h-64 rounded-xl overflow-hidden border border-border bg-card">
-          <img
-            src={event.imageUrl}
-            alt={event.title}
-            className="h-full w-full object-cover"
+          <Image
+            src={event.imageUrl || "/placeholder-event.png"}
+            alt={event.title || "Event image"}
+            fill
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            className="object-cover"
           />
 
           <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full bg-background/90 backdrop-blur text-xs font-medium">
@@ -105,25 +114,29 @@ function DetailContent({
 
               <div>
                 <p className="text-sm font-medium">
-                  {new Date(event.dateTime).toLocaleDateString(
-                    undefined,
-                    {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    }
-                  )}
+                  {event.dateTime
+                    ? new Date(event.dateTime).toLocaleDateString(
+                        undefined,
+                        {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        }
+                      )
+                    : "Date not available"}
                 </p>
 
                 <p className="text-sm text-muted-foreground">
-                  {new Date(event.dateTime).toLocaleTimeString(
-                    undefined,
-                    {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }
-                  )}
+                  {event.dateTime
+                    ? new Date(event.dateTime).toLocaleTimeString(
+                        undefined,
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }
+                      )
+                    : ""}
                 </p>
               </div>
             </div>
@@ -190,6 +203,10 @@ function DetailContent({
   );
 }
 
+// --------------------------------------------------
+// EVENT DETAIL CONTENT
+// --------------------------------------------------
+
 function EventDetailContent() {
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -201,22 +218,33 @@ function EventDetailContent() {
   const [loadingEvent, setLoadingEvent] = useState(true);
 
   useEffect(() => {
+    if (!id) return;
+
     let cancelled = false;
 
     async function fetchEvent() {
       try {
         setLoadingEvent(true);
 
-        const existingEvent = events.find((item) => item.id === id);
+        // Check the events context first
+        const existingEvent = events.find(
+          (item) => item.id === id
+        );
 
         if (existingEvent) {
-          if (!cancelled) setEvent(existingEvent);
+          if (!cancelled) {
+            setEvent(existingEvent);
+          }
           return;
         }
 
-        const response = await fetch(`${API_URL}/events/${id}`, {
-          credentials: "include",
-        });
+        // Fetch from backend if not found in context
+        const response = await fetch(
+          `${API_URL}/events/${encodeURIComponent(id)}`,
+          {
+            credentials: "include",
+          }
+        );
 
         if (!response.ok) {
           throw new Error("Event not found");
@@ -224,17 +252,32 @@ function EventDetailContent() {
 
         const data = await response.json();
 
+        if (!data.event) {
+          throw new Error("Event not found");
+        }
+
+        const backendEvent = data.event;
+
         if (!cancelled) {
           setEvent({
-            ...data.event,
-            attendeeIds: data.event.attendeeIds ?? [],
+            ...backendEvent,
+            id: backendEvent.id || backendEvent._id,
+            attendeeIds:
+              backendEvent.attendeeIds ??
+              backendEvent.participants ??
+              [],
           });
         }
       } catch (error) {
         console.error("Failed to load event:", error);
-        if (!cancelled) setEvent(null);
+
+        if (!cancelled) {
+          setEvent(null);
+        }
       } finally {
-        if (!cancelled) setLoadingEvent(false);
+        if (!cancelled) {
+          setLoadingEvent(false);
+        }
       }
     }
 
@@ -256,16 +299,32 @@ function EventDetailContent() {
   if (!event) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <h2 className="text-2xl font-bold">Event not found</h2>
-        <Link href="/events" className="text-primary hover:underline">
+        <h2 className="text-2xl font-bold">
+          Event not found
+        </h2>
+
+        <Link
+          href="/events"
+          className="text-primary hover:underline"
+        >
           Back to all events
         </Link>
       </div>
     );
   }
 
-  return <DetailContent event={event} user={user} />;
+  return (
+    <DetailContent
+      key={event.id}
+      event={event}
+      user={user}
+    />
+  );
 }
+
+// --------------------------------------------------
+// MAIN PAGE WITH SUSPENSE
+// --------------------------------------------------
 
 export default function EventDetailPage() {
   return (

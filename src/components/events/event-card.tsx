@@ -2,6 +2,8 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+
 import {
   CalendarDays,
   MapPin,
@@ -9,6 +11,7 @@ import {
   Tag,
   ArrowRight,
 } from "lucide-react";
+
 import type { Event } from "@/types";
 
 type EventStatus = "upcoming" | "active" | "completed";
@@ -26,23 +29,29 @@ export function EventCard({
   userJoined = false,
   onJoin,
 }: EventCardProps) {
-  const formattedDate = new Date(event.dateTime).toLocaleDateString(
-    "en-US",
-    {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }
-  );
+  const eventId = event.id;
 
-  const statusStyles = {
+  const date = event.dateTime
+    ? new Date(event.dateTime)
+    : null;
+
+  const formattedDate =
+    date && !Number.isNaN(date.getTime())
+      ? date.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "Date not available";
+
+  const statusStyles: Record<EventStatus, string> = {
     upcoming: "bg-blue-100 text-blue-700",
     active: "bg-green-100 text-green-700",
     completed: "bg-gray-200 text-gray-700",
   };
 
-  const statusLabels = {
+  const statusLabels: Record<EventStatus, string> = {
     upcoming: "Upcoming",
     active: "Active",
     completed: "Completed",
@@ -50,16 +59,19 @@ export function EventCard({
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+
       {/* Image */}
-      <div className="relative h-64 overflow-hidden">
+      <div className="relative h-64 overflow-hidden bg-muted">
         {event.imageUrl ? (
-          <img
+          <Image
             src={event.imageUrl}
-            alt={event.title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            alt={event.title || "Event image"}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-muted">
+          <div className="flex h-full items-center justify-center">
             <span className="text-muted-foreground">
               No image available
             </span>
@@ -117,7 +129,7 @@ export function EventCard({
           )}
         </div>
 
-        {/* Join button: Upcoming events only */}
+        {/* Join button */}
         {status === "upcoming" && (
           <button
             type="button"
@@ -131,7 +143,7 @@ export function EventCard({
 
         {/* View Event */}
         <Link
-          href={`/events/${event.id}`}
+          href={`/events/${eventId}`}
           className="flex w-full items-center justify-center gap-3 rounded-xl bg-primary px-5 py-4 font-semibold text-primary-foreground transition-colors hover:opacity-90"
         >
           View Event
