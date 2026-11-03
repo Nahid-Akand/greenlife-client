@@ -1,5 +1,7 @@
+
 "use client";
 
+import { useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { useEvents } from "@/contexts/events-context";
 import { EventForm } from "@/components/events/event-form";
@@ -14,13 +16,20 @@ import {
 } from "lucide-react";
 
 export default function CreateEventPage() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const { createEvent } = useEvents();
   const router = useRouter();
 
+  // Wait for the backend session check before redirecting.
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace("/login");
+    }
+  }, [isLoading, user, router]);
+
   const handleSave = async (values: EventFormValues) => {
     if (!user) {
-      router.push("/login");
+      router.replace("/login");
       return;
     }
 
@@ -39,6 +48,25 @@ export default function CreateEventPage() {
       );
     }
   };
+
+  // Show loading while checking authentication.
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-white">
+        <div className="text-center">
+          <div className="mx-auto mb-4 size-10 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
+          <p className="text-sm font-medium">
+            Checking authentication...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Avoid rendering the form for logged-out users.
+  if (!user) {
+    return null;
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-white sm:px-6 lg:px-8">
@@ -105,6 +133,7 @@ export default function CreateEventPage() {
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">
               Event Information
             </h2>
+
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Provide the necessary information to publish your event.
             </p>
