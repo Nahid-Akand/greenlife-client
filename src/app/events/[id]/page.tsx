@@ -1,6 +1,7 @@
 
 "use client";
-import { useEffect, useState } from "react";
+
+import { Suspense, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,6 @@ function DetailContent({
 
   const isJoined = !!user && attendeeIds.includes(user.id);
 
-  // Keep attendee IDs synchronized with updated event data.
   useEffect(() => {
     setAttendeeIds(event.attendeeIds ?? []);
   }, [event.attendeeIds]);
@@ -190,9 +190,7 @@ function DetailContent({
   );
 }
 
-
-  
-export default function EventDetailPage() {
+function EventDetailContent() {
   const params = useParams<{ id: string }>();
   const id = params.id;
 
@@ -267,4 +265,18 @@ export default function EventDetailPage() {
   }
 
   return <DetailContent event={event} user={user} />;
-}     
+}
+
+export default function EventDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          Loading event...
+        </div>
+      }
+    >
+      <EventDetailContent />
+    </Suspense>
+  );
+}

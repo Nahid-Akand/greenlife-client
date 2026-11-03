@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -14,14 +15,14 @@ type EventStatus = "upcoming" | "active" | "completed";
 
 interface EventCardProps {
   event: Event;
-  status: EventStatus;
+  status?: EventStatus;
   userJoined?: boolean;
   onJoin?: () => void;
 }
 
 export function EventCard({
   event,
-  status,
+  status = "upcoming",
   userJoined = false,
   onJoin,
 }: EventCardProps) {
