@@ -50,8 +50,12 @@ export default function LoginPage() {
       });
 
       router.push("/");
-    } catch (err: any) {
-      setError(err.message || "Invalid email or password");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Invalid email or password"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -82,8 +86,12 @@ export default function LoginPage() {
       });
 
       router.push("/");
-    } catch (err: any) {
-      setError(err.message || "Google login failed");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Google login failed"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +104,7 @@ export default function LoginPage() {
         {/* Header */}
         <div className="flex flex-col items-center gap-3">
           <div className="relative">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 shadow-lg shadow-emerald-500/30">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-emerald-400 to-teal-600 shadow-lg shadow-emerald-500/30">
               <div className="text-2xl text-white">
                 🤝
               </div>

@@ -30,9 +30,13 @@ export default function AllEventsPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [now, setNow] = useState<number | null>(null);
 
-  useEffect(() => {
+ useEffect(() => {
+  const timer = setTimeout(() => {
     setNow(Date.now());
-  }, []);
+  }, 0);
+
+  return () => clearTimeout(timer);
+}, []);
 
   const filteredEvents =
     selectedCategory === "All"
