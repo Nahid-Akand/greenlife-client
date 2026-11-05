@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useEvents } from "@/contexts/events-context";
 import { useAuth } from "@/contexts/auth-context";
@@ -12,15 +13,40 @@ import {
   Search,
   Sparkles,
   Users,
+  LogOut,
 } from "lucide-react";
 
 export default function JoinedEventsPage() {
-  const { events, isLoading } = useEvents();
+  const { events, isLoading, leaveEvent } = useEvents();
   const { user } = useAuth();
+
+  const [leavingEventId, setLeavingEventId] = useState<string | null>(null);
 
   const joinedEvents = events.filter((event) =>
     (event.attendeeIds ?? []).includes(user?.id ?? "")
   );
+
+  const handleLeaveEvent = async (eventId: string) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to leave this event?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setLeavingEventId(eventId);
+      await leaveEvent(eventId);
+      alert("You have successfully left the event.");
+    } catch (error) {
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to leave the event."
+      );
+    } finally {
+      setLeavingEventId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -38,7 +64,6 @@ export default function JoinedEventsPage() {
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 dark:bg-zinc-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        {/* Back navigation */}
         <Link
           href="/"
           className="mb-7 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-600 transition hover:border-emerald-300 hover:text-emerald-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:text-emerald-400"
@@ -47,7 +72,6 @@ export default function JoinedEventsPage() {
           Back to Home
         </Link>
 
-        {/* Hero header */}
         <section className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-800 px-6 py-9 text-white shadow-lg sm:px-10 sm:py-12">
           <div className="absolute -right-12 -top-20 size-64 rounded-full bg-white/5 blur-2xl" />
           <div className="absolute -bottom-24 right-1/3 size-56 rounded-full bg-emerald-400/10 blur-2xl" />
@@ -79,13 +103,11 @@ export default function JoinedEventsPage() {
           </div>
         </section>
 
-        {/* Statistics */}
         <section className="mb-9 grid gap-4 sm:grid-cols-2">
           <div className="flex items-center gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex size-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
               <CalendarDays className="size-6" />
             </div>
-
             <div>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
                 Events Joined
@@ -100,7 +122,6 @@ export default function JoinedEventsPage() {
             <div className="flex size-12 items-center justify-center rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400">
               <Users className="size-6" />
             </div>
-
             <div>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
                 Community Participation
@@ -112,7 +133,6 @@ export default function JoinedEventsPage() {
           </div>
         </section>
 
-        {/* Event section heading */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold text-zinc-900 dark:text-white">
@@ -129,7 +149,6 @@ export default function JoinedEventsPage() {
           </span>
         </div>
 
-        {/* Joined event cards */}
         {joinedEvents.length === 0 ? (
           <section className="rounded-3xl border border-dashed border-zinc-300 bg-white px-6 py-16 text-center dark:border-zinc-700 dark:bg-zinc-900">
             <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
@@ -157,12 +176,25 @@ export default function JoinedEventsPage() {
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {joinedEvents.map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                userJoined
-                showJoinButton={false}
-              />
+              <div key={event.id} className="flex flex-col">
+                <EventCard
+                  event={event}
+                  userJoined
+                  showJoinButton={false}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => handleLeaveEvent(event.id)}
+                  disabled={leavingEventId !== null}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950"
+                >
+                  <LogOut className="size-4" />
+                  {leavingEventId === event.id
+                    ? "Leaving..."
+                    : "Leave Event"}
+                </button>
+              </div>
             ))}
           </div>
         )}
